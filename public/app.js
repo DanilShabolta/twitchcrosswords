@@ -58,10 +58,24 @@ function updateVisibilityUI() {
   }
 }
 
+// Определяем хост сервера расширения
+function getBackendHost() {
+  const host = window.location.host;
+  // Если страница загружена внутри Twitch CDN, iframe или GitHub Codespaces — подключаемся к Railway
+  if (!host || host.includes('twitch.tv') || host.includes('ext-twitch') || host.includes('github.dev')) {
+    return 'twitchcrosswords-production.up.railway.app';
+  }
+  return host;
+}
+
 // Подключение по WebSocket к серверу расширения
 function connectWebSocket() {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}`;
+  const host = getBackendHost();
+  const isSecure = window.location.protocol === 'https:' || host.includes('railway.app');
+  const protocol = isSecure ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${host}`;
+
+  console.log('[Extension] Подключение к WebSocket:', wsUrl);
 
   socket = new WebSocket(wsUrl);
 
@@ -81,8 +95,16 @@ function connectWebSocket() {
   };
 
   socket.onclose = () => {
-    console.warn('[Extension] Соединение закрыто. Переподключение...');
+    console.warn('[Extension] Соединение закрыто. Переподключение через 3 сек...');
+    const connText = document.getElementById('connStatusText');
+    if (connText) connText.textContent = 'Переподключение к серверу...';
     setTimeout(connectWebSocket, 3000);
+  };
+
+  socket.onerror = (err) => {
+    console.error('[Extension] Ошибка соединения WS:', err);
+    const connText = document.getElementById('connStatusText');
+    if (connText) connText.textContent = 'Ошибка соединения. Проверьте сервер.';
   };
 }
 

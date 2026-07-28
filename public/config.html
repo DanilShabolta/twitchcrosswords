@@ -370,7 +370,14 @@
 
 </div>
 <script>
-  const SERVER = window.location.origin;
+  function getBackendServer() {
+    const origin = window.location.origin;
+    if (!origin || origin.includes('twitch.tv') || origin.includes('ext-twitch') || origin.includes('github.dev')) {
+      return 'https://twitchcrosswords-production.up.railway.app';
+    }
+    return origin;
+  }
+  const SERVER = getBackendServer();
 
   function toggleEye() {
     const inp = document.getElementById('input-token');
