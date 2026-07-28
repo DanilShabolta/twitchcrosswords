@@ -1,0 +1,25 @@
+{
+  "name": "twitch-crossword-extension",
+  "version": "1.0.0",
+  "description": "Interactive Twitch Extension Crossword Game driven by Twitch Chat commands",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "twitch",
+    "extension",
+    "crossword",
+    "bot",
+    "chat-game"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "ws": "^8.17.0"
+  }
+}

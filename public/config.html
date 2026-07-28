@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Настройка расширения — Crossword Bot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d0b1a;
+      --surface:     rgba(25, 22, 45, 0.92);
+      --border:      rgba(145, 70, 255, 0.18);
+      --purple:      #9146FF;
+      --purple-dim:  #772CE8;
+      --cyan:        #00f0e0;
+      --cyan-dim:    rgba(0, 240, 224, 0.12);
+      --green:       #00e676;
+      --red:         #ff4d6d;
+      --text:        #e8e4ff;
+      --muted:       rgba(200, 190, 255, 0.45);
+      --glow-purple: rgba(145, 70, 255, 0.35);
+      --glow-cyan:   rgba(0, 240, 224, 0.25);
+      --radius:      14px;
+      --transition:  0.22s ease;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 16px 60px;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 0%, rgba(145,70,255,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(0,240,224,0.07) 0%, transparent 60%);
+    }
+
+    .config-wrapper {
+      width: 100%;
+      max-width: 540px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .cfg-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding-bottom: 8px;
+    }
+    .cfg-logo {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, var(--purple-dim), var(--purple));
+      border-radius: 12px;
+      display: grid; place-items: center;
+      font-size: 24px;
+      box-shadow: 0 0 24px var(--glow-purple);
+      flex-shrink: 0;
+    }
+    .cfg-title { font-size: 20px; font-weight: 800; line-height: 1.2; }
+    .cfg-subtitle { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+    .cfg-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 4px 32px rgba(0,0,0,0.4);
+      transition: border-color var(--transition);
+    }
+    .cfg-card:hover { border-color: rgba(145,70,255,0.32); }
+
+    .card-head {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 700;
+      color: var(--cyan);
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 18px;
+    }
+
+    .form-row { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
+    label {
+      font-size: 11px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .05em;
+    }
+
+    .input-wrap { position: relative; display: flex; align-items: center; }
+    .input-wrap input {
+      width: 100%;
+      padding: 11px 14px;
+      padding-right: 40px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      outline: none;
+    }
+    .input-wrap input:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(145,70,255,0.2);
+    }
+    .input-wrap input::placeholder { color: rgba(200,190,255,0.25); }
+
+    .eye-btn {
+      position: absolute; right: 12px;
+      background: none; border: none;
+      cursor: pointer; color: var(--muted);
+      font-size: 16px; padding: 0; line-height: 1;
+      transition: color var(--transition);
+    }
+    .eye-btn:hover { color: var(--cyan); }
+
+    .hint {
+      font-size: 11px; color: var(--muted);
+      line-height: 1.5;
+    }
+    .hint a { color: var(--cyan); text-decoration: none; }
+    .hint a:hover { text-decoration: underline; }
+    .hint code {
+      background: rgba(255,255,255,0.08);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    .btn {
+      width: 100%; padding: 13px;
+      border: none; border-radius: 9px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition), opacity var(--transition);
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    .btn-purple {
+      background: linear-gradient(135deg, var(--purple-dim), var(--purple));
+      color: #fff;
+      box-shadow: 0 4px 18px var(--glow-purple);
+    }
+    .btn-purple:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px var(--glow-purple);
+    }
+
+    .btn-cyan {
+      background: linear-gradient(135deg, #00b4a6, var(--cyan));
+      color: #041a18;
+      box-shadow: 0 4px 18px var(--glow-cyan);
+    }
+    .btn-cyan:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px var(--glow-cyan);
+    }
+
+    .btn-outline {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover:not(:disabled) {
+      border-color: var(--purple);
+      background: rgba(145,70,255,0.08);
+    }
+
+    .status-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12px; font-weight: 600;
+      margin-top: 12px;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity .3s, transform .3s;
+    }
+    .status-bar.visible { opacity: 1; transform: translateY(0); }
+    .status-bar.success { background: rgba(0,230,118,0.12); border: 1px solid rgba(0,230,118,0.3); color: var(--green); }
+    .status-bar.error   { background: rgba(255,77,109,0.12);  border: 1px solid rgba(255,77,109,0.3);  color: var(--red);   }
+    .status-bar.info    { background: var(--cyan-dim);         border: 1px solid rgba(0,240,224,0.25);  color: var(--cyan);  }
+
+    .url-row { display: flex; gap: 8px; align-items: flex-start; }
+    .url-row .input-wrap { flex: 1; }
+    .url-row .btn { width: auto; padding: 11px 18px; white-space: nowrap; }
+
+    .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+    .spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .bot-status {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; color: var(--muted);
+      margin-top: 14px;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #555; flex-shrink: 0;
+      transition: background .4s;
+    }
+    .dot.online  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot.offline { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+    .dot.pending { background: #f5a623;      box-shadow: 0 0 6px #f5a623; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    .info-box {
+      background: rgba(0,240,224,0.06);
+      border: 1px solid rgba(0,240,224,0.18);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 12px; line-height: 1.7;
+      color: rgba(200,240,238,0.8);
+    }
+    .info-box strong { color: var(--cyan); }
+    .info-box ol { padding-left: 18px; margin-top: 6px; }
+    .info-box li { margin-bottom: 4px; }
+
+    select {
+      width: 100%;
+      padding: 11px 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      outline: none;
+      cursor: pointer;
+    }
+    select option { background: #161424; color: white; }
+    select:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(145,70,255,0.2); }
+  </style>
+</head>
+<body>
+<div class="config-wrapper">
+
+  <!-- Header -->
+  <div class="cfg-header">
+    <div class="cfg-logo">🧩</div>
+    <div>
+      <div class="cfg-title">Crossword Bot</div>
+      <div class="cfg-subtitle">Настройка расширения Twitch Extension</div>
+    </div>
+  </div>
+
+  <!-- Card 1: Bot Settings -->
+  <div class="cfg-card">
+    <div class="card-head">🤖 Настройки бота</div>
+
+    <div class="form-row">
+      <label for="input-channel">Название канала Twitch</label>
+      <div class="input-wrap">
+        <input id="input-channel" type="text" placeholder="cptponos" autocomplete="off" spellcheck="false" />
+      </div>
+      <span class="hint">Без символа <code>#</code>. Именно в этот канал бот будет писать и читать чат.</span>
+    </div>
+
+    <div class="form-row">
+      <label for="input-token">OAuth токен бота</label>
+      <div class="input-wrap">
+        <input id="input-token" type="password" placeholder="oauth:xxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false" />
+        <button class="eye-btn" id="eye-btn" onclick="toggleEye()" title="Показать / скрыть токен">👁️</button>
+      </div>
+      <span class="hint">
+        Получить токен: <a href="https://twitchapps.com/tmi/" target="_blank" rel="noopener">twitchapps.com/tmi</a>
+        — войди под аккаунтом бота и скопируй токен. Начинается с <code>oauth:</code>.
+      </span>
+    </div>
+
+    <div class="form-row">
+      <label for="input-botname">Логин аккаунта бота</label>
+      <div class="input-wrap">
+        <input id="input-botname" type="text" placeholder="CrosswordBot" autocomplete="off" spellcheck="false" />
+      </div>
+      <span class="hint">Логин Twitch-аккаунта, которому принадлежит токен выше.</span>
+    </div>
+
+    <button class="btn btn-purple" id="btn-save-bot" onclick="saveBotConfig()">
+      <span id="btn-save-label">💾 Сохранить и подключить бота</span>
+    </button>
+
+    <div class="status-bar" id="bot-status-msg"></div>
+
+    <div class="bot-status">
+      <span class="dot" id="conn-dot"></span>
+      <span id="conn-label">Статус: проверка…</span>
+    </div>
+  </div>
+
+  <!-- Card 2: Load Crossword -->
+  <div class="cfg-card">
+    <div class="card-head">🌐 Загрузить кроссворд по ссылке</div>
+
+    <div class="info-box">
+      <strong>Как добавить кроссворд по ссылке:</strong>
+      <ol>
+        <li>Найди кроссворд на <a href="https://www.graycell.ru/onlinecross/" target="_blank" rel="noopener" style="color:var(--cyan)">graycell.ru/onlinecross</a> (лучшая поддержка)</li>
+        <li>Скопируй адрес страницы кроссворда из браузера</li>
+        <li>Вставь ссылку ниже и нажми «Загрузить»</li>
+        <li>Кроссворд мгновенно появится у зрителей на стриме!</li>
+      </ol>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="form-row">
+      <label for="input-url">Ссылка на кроссворд</label>
+      <div class="url-row">
+        <div class="input-wrap">
+          <input id="input-url" type="url" placeholder="https://www.graycell.ru/onlinecross/cross445.html" spellcheck="false" />
+        </div>
+        <button class="btn btn-cyan" id="btn-load-url" onclick="loadByUrl()">
+          <span id="btn-url-label">Загрузить</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="status-bar" id="url-status-msg"></div>
+
+    <div class="divider"></div>
+
+    <div class="card-head" style="margin-bottom:12px">🎲 Или по теме</div>
+
+    <div class="form-row">
+      <label for="select-theme">Тема кроссворда</label>
+      <select id="select-theme">
+        <option value="">⏳ Загрузка тем…</option>
+      </select>
+    </div>
+
+    <button class="btn btn-outline" id="btn-load-theme" onclick="loadByTheme()">
+      <span id="btn-theme-label">🎲 Загрузить случайный кроссворд по теме</span>
+    </button>
+
+    <div class="status-bar" id="theme-status-msg"></div>
+  </div>
+
+  <!-- Card 3: How-to -->
+  <div class="cfg-card">
+    <div class="card-head">📺 Как играть зрителям</div>
+    <div style="font-size:13px; line-height:1.9; color: rgba(220,215,255,0.75)">
+      <p><strong style="color:var(--cyan)">Зрители пишут в чате:</strong></p>
+      <p style="margin: 6px 0 12px; font-family:monospace; background:rgba(255,255,255,0.05); padding:10px 14px; border-radius:8px; font-size:12px; letter-spacing:.03em;">
+        1. свияжск &nbsp;·&nbsp; 2 арбуз &nbsp;·&nbsp; !3 москва &nbsp;·&nbsp; #4 байкал
+      </p>
+      <p>Для расширенного управления (новая игра, подсказки, лидерборд) откройте
+        <a href="/dashboard.html" target="_blank" style="color:var(--purple); font-weight:600;">Панель стримера ↗</a>
+      </p>
+    </div>
+  </div>
+
+</div>
+<script>
+  const SERVER = window.location.origin;
+
+  function toggleEye() {
+    const inp = document.getElementById('input-token');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  function showStatus(id, msg, type = 'info') {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = 'status-bar ' + type + ' visible';
+    if (type !== 'error') setTimeout(() => el.classList.remove('visible'), 6000);
+  }
+
+  function setLoading(btnId, labelId, loading, defaultLabel) {
+    const btn = document.getElementById(btnId);
+    const lbl = document.getElementById(labelId);
+    btn.disabled = loading;
+    lbl.innerHTML = loading ? '<span class="spinner"></span>' : defaultLabel;
+  }
+
+  const dot   = document.getElementById('conn-dot');
+  const label = document.getElementById('conn-label');
+
+  async function pollStatus() {
+    try {
+      const r = await fetch(SERVER + '/api/state');
+      if (!r.ok) throw new Error();
+      const data = await r.json();
+      dot.className = 'dot online';
+      label.textContent = 'Сервер онлайн · канал #' + (data.channel || '—');
+    } catch {
+      dot.className = 'dot offline';
+      label.textContent = 'Сервер недоступен';
+    }
+  }
+  pollStatus();
+  setInterval(pollStatus, 8000);
+
+  async function saveBotConfig() {
+    const channel     = document.getElementById('input-channel').value.trim().replace('#', '');
+    const token       = document.getElementById('input-token').value.trim();
+    const botUsername = document.getElementById('input-botname').value.trim();
+
+    if (!channel) { showStatus('bot-status-msg', '⚠️ Укажите название канала', 'error'); return; }
+    if (!token)   { showStatus('bot-status-msg', '⚠️ Вставьте OAuth токен бота', 'error'); return; }
+
+    setLoading('btn-save-bot', 'btn-save-label', true);
+    dot.className = 'dot pending';
+    label.textContent = 'Подключение…';
+
+    try {
+      const r = await fetch(SERVER + '/api/bot-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel, token, botUsername })
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Ошибка сервера');
+      showStatus('bot-status-msg', '✅ Бот подключён к каналу #' + data.channel, 'success');
+      localStorage.setItem('cw_channel', channel);
+      localStorage.setItem('cw_botname', botUsername);
+    } catch (e) {
+      showStatus('bot-status-msg', '❌ ' + e.message, 'error');
+    } finally {
+      setLoading('btn-save-bot', 'btn-save-label', false, '💾 Сохранить и подключить бота');
+      pollStatus();
+    }
+  }
+
+  async function loadByUrl() {
+    const url = document.getElementById('input-url').value.trim();
+    if (!url) { showStatus('url-status-msg', '⚠️ Вставьте ссылку на кроссворд', 'error'); return; }
+
+    setLoading('btn-load-url', 'btn-url-label', true);
+    showStatus('url-status-msg', '⏳ Загрузка и парсинг…', 'info');
+
+    try {
+      const r = await fetch(SERVER + '/api/load-online-crossword', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: 'url', url })
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Ошибка загрузки');
+      showStatus('url-status-msg', '✅ Загружен: «' + (data.title || 'Кроссворд') + '» (' + data.wordCount + ' слов). Зрители уже видят!', 'success');
+      document.getElementById('input-url').value = '';
+    } catch (e) {
+      showStatus('url-status-msg', '❌ ' + e.message, 'error');
+    } finally {
+      setLoading('btn-load-url', 'btn-url-label', false, 'Загрузить');
+    }
+  }
+
+  async function loadThemes() {
+    try {
+      const r = await fetch(SERVER + '/api/themes');
+      const themes = await r.json();
+      const sel = document.getElementById('select-theme');
+      sel.innerHTML = '';
+      themes.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = (t.icon || '🎯') + ' ' + t.name;
+        sel.appendChild(opt);
+      });
+    } catch {
+      document.getElementById('select-theme').innerHTML = '<option value="">Сервер недоступен</option>';
+    }
+  }
+  loadThemes();
+
+  async function loadByTheme() {
+    const category = document.getElementById('select-theme').value;
+    setLoading('btn-load-theme', 'btn-theme-label', true);
+    showStatus('theme-status-msg', '⏳ Загрузка кроссворда…', 'info');
+
+    try {
+      const r = await fetch(SERVER + '/api/load-online-crossword', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: 'theme', category })
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Ошибка загрузки');
+      showStatus('theme-status-msg', '✅ «' + (data.title || 'Кроссворд') + '» запущен (' + data.wordCount + ' слов)!', 'success');
+    } catch (e) {
+      showStatus('theme-status-msg', '❌ ' + e.message, 'error');
+    } finally {
+      setLoading('btn-load-theme', 'btn-theme-label', false, '🎲 Загрузить случайный кроссворд по теме');
+    }
+  }
+
+  const savedCh = localStorage.getItem('cw_channel');
+  const savedBn = localStorage.getItem('cw_botname');
+  if (savedCh) document.getElementById('input-channel').value = savedCh;
+  if (savedBn) document.getElementById('input-botname').value = savedBn;
+</script>
+</body>
+</html>

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Панель управления Стримера - Twitch Crossword</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      background: #0B0A14 !important;
+      align-items: center !important;
+      overflow-y: auto !important;
+      padding: 30px !important;
+    }
+    .dashboard-layout {
+      width: 100%;
+      max-width: 1100px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .panel-card {
+      background: rgba(22, 20, 36, 0.9);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-group {
+      margin-bottom: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    input, button, select {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-glass);
+      color: white;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    select option {
+      background: #161424;
+      color: white;
+    }
+    button.btn-primary {
+      background: linear-gradient(135deg, #772CE8, #9146FF);
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+    }
+    button.btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px var(--accent-purple-glow);
+    }
+    button.btn-green {
+      background: linear-gradient(135deg, #00A859, #00E676);
+      color: #052411;
+      font-weight: 800;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+    }
+    button.btn-green:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 230, 118, 0.4);
+    }
+    .activity-log {
+      height: 280px;
+      overflow-y: auto;
+      background: rgba(10, 9, 17, 0.8);
+      border-radius: 8px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .log-item {
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .log-item.success { color: #00FF88; border-left: 3px solid #00FF88; }
+    .log-item.error { color: #FF4949; border-left: 3px solid #FF4949; }
+    .log-item.system { color: #00F0FF; border-left: 3px solid #00F0FF; }
+    .log-item.info { color: var(--text-muted); border-left: 3px solid var(--text-muted); }
+    .alltime-box {
+      max-height: 180px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div style="width: 100%; max-width: 1100px; margin-bottom: 20px;">
+    <h1 style="font-family: 'Outfit'; font-size: 26px; color: white; display: flex; align-items: center; gap: 10px;">
+      🎛️ Панель управления Twitch Кроссвордом
+    </h1>
+    <p style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">
+      Управление каналами, генерацией вопросов, загрузкой с веб-сайтов и топом за всё время
+    </p>
+  </div>
+
+  <div class="dashboard-layout">
+    
+    <!-- Настройки канала и генерация -->
+    <div class="panel-card">
+      <div class="card-title">⚙️ Настройки канала</div>
+      
+      <div class="form-group">
+        <label>Название вашего Twitch канала (login без #):</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="channelInput" placeholder="например: streamer_name" style="flex: 1;">
+          <button id="saveChannelBtn" class="btn-primary">Подключить чат</button>
+        </div>
+      </div>
+
+      <hr style="border-color: var(--border-glass); margin: 18px 0;">
+
+      <div class="card-title">🌐 Загрузка кроссвордов из Интернета</div>
+      
+      <div class="form-group">
+        <label>Выберите тематический веб-кроссворд:</label>
+        <select id="themeSelect">
+          <option value="">🎲 Случайный из любых тем</option>
+        </select>
+      </div>
+      
+      <button id="loadRandomOnlineBtn" class="btn-green" style="width: 100%; padding: 12px; margin-bottom: 12px;">
+        🎲 Загрузить случайный кроссворд с сайта
+      </button>
+
+      <div class="form-group">
+        <label>Или укажите ссылку (URL) для парсинга ответов с любого сайта:</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="url" id="urlInput" placeholder="https://example.com/crossword" style="flex: 1;">
+          <button id="loadUrlBtn" style="background: rgba(0, 240, 255, 0.15); border-color: var(--accent-cyan); color: var(--accent-cyan); font-weight: 700; cursor: pointer;">
+            Загрузить по URL
+          </button>
+        </div>
+      </div>
+      <div id="loadStatus" style="font-size: 12px; margin-top: 4px; min-height: 18px;"></div>
+
+      <hr style="border-color: var(--border-glass); margin: 18px 0;">
+
+      <div class="card-title">🧩 Генерация из локальной базы</div>
+      <div class="form-group">
+        <label>Количество слов в сетке:</label>
+        <input type="number" id="wordCountInput" value="10" min="5" max="25">
+      </div>
+      <button id="newGameBtn" class="btn-primary" style="width: 100%;">
+        🔄 Сгенерировать стандартный кроссворд
+      </button>
+
+      <hr style="border-color: var(--border-glass); margin: 18px 0;">
+
+      <div class="card-title">💡 Открыть подсказку зрителям</div>
+      <div class="form-group">
+        <label>Номер вопроса для открытия:</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="number" id="revealNumInput" placeholder="№ слова" style="width: 100px;">
+          <button id="revealBtn" style="flex: 1; background: rgba(255, 214, 0, 0.2); border-color: var(--accent-yellow); color: var(--accent-yellow); font-weight: 700; cursor: pointer;">
+            Открыть ответ
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Лог активности, состояние и Топ за все время -->
+    <div class="panel-card">
+      <div class="card-title">📜 Лог событий и Состояние игры</div>
+      
+      <div style="display: flex; gap: 14px; margin-bottom: 14px;">
+        <div style="background: rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 8px; flex: 1;">
+          <div style="font-size: 11px; color: var(--text-muted);">Канал Twitch:</div>
+          <div id="statChannel" style="font-size: 15px; font-weight: 700; color: var(--accent-cyan);">-</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 8px; flex: 1;">
+          <div style="font-size: 11px; color: var(--text-muted);">Прогресс раунда:</div>
+          <div id="statProgress" style="font-size: 15px; font-weight: 700; color: var(--accent-green);">0 / 0 (0%)</div>
+        </div>
+      </div>
+
+      <div class="activity-log" id="activityLog">
+        <!-- Логи рендерятся через JS -->
+      </div>
+
+      <hr style="border-color: var(--border-glass); margin: 18px 0;">
+
+      <div class="card-title">⭐ Топ за всё время (Рекорды)</div>
+      <div id="allTimeLeaderboardBox" class="alltime-box">
+        <!-- Топ за все время рендерится через JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      loadThemes();
+      loadState();
+
+      document.getElementById('saveChannelBtn').addEventListener('click', async () => {
+        const channel = document.getElementById('channelInput').value.trim();
+        if (!channel) return alert('Введите имя канала');
+        
+        const res = await fetch('/api/channel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channel })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`Канал переключен на #${data.channel}`);
+          loadState();
+        }
+      });
+
+      document.getElementById('newGameBtn').addEventListener('click', async () => {
+        const count = parseInt(document.getElementById('wordCountInput').value, 10) || 10;
+        const res = await fetch('/api/new-game', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wordCount: count })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadState();
+        }
+      });
+
+      document.getElementById('loadRandomOnlineBtn').addEventListener('click', async () => {
+        const category = document.getElementById('themeSelect').value;
+        const statusEl = document.getElementById('loadStatus');
+        statusEl.style.color = '#00F0FF';
+        statusEl.textContent = '⏳ Загрузка случайного кроссворда с сайта...';
+
+        try {
+          const res = await fetch('/api/load-online-crossword', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source: 'random', category })
+          });
+          const data = await res.json();
+          if (data.error) {
+            statusEl.style.color = '#FF4949';
+            statusEl.textContent = `❌ ${data.error}`;
+          } else {
+            statusEl.style.color = '#00FF88';
+            statusEl.textContent = `✅ Загружено: ${data.title} (${data.wordCount} слов)!`;
+            loadState();
+          }
+        } catch (e) {
+          statusEl.style.color = '#FF4949';
+          statusEl.textContent = `❌ Ошибка сети при загрузке`;
+        }
+      });
+
+      document.getElementById('loadUrlBtn').addEventListener('click', async () => {
+        const url = document.getElementById('urlInput').value.trim();
+        if (!url) return alert('Введите URL веб-страницы');
+        
+        const statusEl = document.getElementById('loadStatus');
+        statusEl.style.color = '#00F0FF';
+        statusEl.textContent = '⏳ Скачивание веб-страницы и извлечение ответов...';
+
+        try {
+          const res = await fetch('/api/load-online-crossword', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source: 'url', url })
+          });
+          const data = await res.json();
+          if (data.error) {
+            statusEl.style.color = '#FF4949';
+            statusEl.textContent = `❌ ${data.error}`;
+          } else {
+            statusEl.style.color = '#00FF88';
+            statusEl.textContent = `✅ Успешно парсено с сайта! Загружено ${data.wordCount} слов.`;
+            loadState();
+          }
+        } catch (e) {
+          statusEl.style.color = '#FF4949';
+          statusEl.textContent = `❌ Ошибка загрузки по ссылке`;
+        }
+      });
+
+      document.getElementById('revealBtn').addEventListener('click', async () => {
+        const num = parseInt(document.getElementById('revealNumInput').value, 10);
+        if (!num) return alert('Укажите номер слова');
+
+        const res = await fetch('/api/reveal-word', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wordNumber: num })
+        });
+        const data = await res.json();
+        if (data.error) alert(data.error);
+        else loadState();
+      });
+
+      setInterval(loadState, 2500);
+    });
+
+    async function loadThemes() {
+      try {
+        const res = await fetch('/api/themes');
+        const themes = await res.json();
+        const select = document.getElementById('themeSelect');
+        themes.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.id;
+          opt.textContent = `${t.name} (${t.count} слов)`;
+          select.appendChild(opt);
+        });
+      } catch (e) {}
+    }
+
+    async function loadState() {
+      try {
+        const res = await fetch('/api/state');
+        const state = await res.json();
+        
+        document.getElementById('statChannel').textContent = `#${state.channel}`;
+        document.getElementById('statProgress').textContent = `${state.stats.solvedWords} / ${state.stats.totalWords} (${state.stats.progressPercent}%)`;
+        document.getElementById('channelInput').value = state.channel;
+
+        // Отрисовка логов
+        const logContainer = document.getElementById('activityLog');
+        logContainer.innerHTML = '';
+        state.recentActivity.forEach(act => {
+          const item = document.createElement('div');
+          item.className = `log-item ${act.type || 'info'}`;
+          item.textContent = `[${act.time}] ${act.text}`;
+          logContainer.appendChild(item);
+        });
+
+        // Отрисовка топа за всё время
+        const allTimeBox = document.getElementById('allTimeLeaderboardBox');
+        allTimeBox.innerHTML = '';
+        const allTimeEntries = Object.entries(state.allTimeLeaderboard || {})
+          .map(([username, data]) => ({ username, ...data }))
+          .sort((a, b) => b.points - a.points);
+
+        if (allTimeEntries.length === 0) {
+          allTimeBox.innerHTML = '<div style="color: var(--text-muted); font-size: 12px;">Пока нет сохраненных игроков.</div>';
+        } else {
+          allTimeEntries.slice(0, 10).forEach((item, index) => {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.justifyContent = 'space-between';
+            row.style.fontSize = '12px';
+            row.style.padding = '4px 8px';
+            row.style.background = 'rgba(255,255,255,0.03)';
+            row.style.borderRadius = '4px';
+
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+            row.innerHTML = `
+              <span>${medal} <b>@${item.username}</b></span>
+              <span style="color: var(--accent-cyan); font-weight: 700;">${item.points} pt <small style="color: var(--text-muted);">(${item.solvedCount} слов)</small></span>
+            `;
+            allTimeBox.appendChild(row);
+          });
+        }
+      } catch (e) {}
+    }
+  </script>
+
+</body>
+</html>

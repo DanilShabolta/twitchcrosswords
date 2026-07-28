@@ -1,0 +1,18 @@
+# Зависимости
+node_modules/
+
+# Секреты (НИКОГДА не публикуй!)
+.env
+ssl/
+
+# Данные игры
+data/leaderboard.json
+
+# Временные файлы
+scratch/
+*.log
+npm-debug.log*
+
+# OS файлы
+.DS_Store
+Thumbs.db

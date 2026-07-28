@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twitch Crossword Extension</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Кнопка переключения видимости для зрителя -->
+  <button id="toggleBtn" class="extension-toggle-btn" title="Нажмите, чтобы показать или скрыть интерфейс кроссворда">
+    <span>🧩</span>
+    <span id="toggleBtnText">Скрыть кроссворд</span>
+    <span id="progressBadge" class="badge-progress">0%</span>
+  </button>
+
+  <!-- Главный виджет расширения -->
+  <div id="extensionContainer" class="extension-container">
+    
+    <!-- Шапка -->
+    <div class="extension-header">
+      <div class="title-box">
+        <div class="title-icon">🧩</div>
+        <div class="title-text">Интерактивный Кроссворд</div>
+      </div>
+      <div class="progress-bar-container">
+        <div id="progressFill" class="progress-bar-fill"></div>
+      </div>
+    </div>
+
+    <!-- Инструкция по вводу в чат -->
+    <div class="chat-instruction">
+      <span>💡 Пишите в чат:</span>
+      <code>номер. ответ</code>
+      <span>(пример: <code>1. свияжск</code>)</span>
+    </div>
+
+    <!-- Навигация по вкладкам -->
+    <div class="tab-navigation">
+      <button class="tab-btn active" data-tab="grid">📐 Сетка</button>
+      <button class="tab-btn" data-tab="clues">📋 Все вопросы</button>
+      <button class="tab-btn" data-tab="leaderboard">🏆 Топ зрителей</button>
+    </div>
+
+    <!-- Контент -->
+    <div id="extensionBody" class="extension-body">
+      <!-- Динамически рендерится через app.js -->
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
