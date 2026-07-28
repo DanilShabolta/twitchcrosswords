@@ -73,9 +73,9 @@ function getChannel() {
 // Определяем хост сервера расширения
 function getBackendHost() {
   const host = window.location.host;
-  // Если страница загружена внутри Twitch CDN, iframe или GitHub Codespaces — подключаемся к Railway
+  // Если страница загружена внутри Twitch CDN, iframe или GitHub Codespaces — подключаемся к Koyeb / Railway
   if (!host || host.includes('twitch.tv') || host.includes('ext-twitch') || host.includes('github.dev')) {
-    return 'twitchcrosswords-production.up.railway.app';
+    return 'twitchcrosswords.koyeb.app';
   }
   return host;
 }
