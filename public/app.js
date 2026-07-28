@@ -73,10 +73,19 @@ function getChannel() {
 // Определяем хост сервера расширения
 function getBackendHost() {
   const host = window.location.host;
-  // Если страница загружена внутри Twitch CDN, iframe или GitHub Codespaces — подключаемся к Render / Railway
-  if (!host || host.includes('twitch.tv') || host.includes('ext-twitch') || host.includes('github.dev')) {
-    return 'twitchcrosswords.onrender.com';
+  // Если открыто напрямую (включая Codespaces *.app.github.dev) — сохраняем хост
+  if (host && !host.includes('twitch.tv') && !host.includes('ext-twitch')) {
+    localStorage.setItem('cw_backend_host', host);
+    return host;
   }
+  // Если внутри Twitch iframe — проверяем URL параметр backend или сохраненный хост
+  const urlParams = new URLSearchParams(window.location.search);
+  const fromQuery = urlParams.get('backend');
+  if (fromQuery) return fromQuery.replace(/^https?:\/\//, '');
+
+  const savedHost = localStorage.getItem('cw_backend_host');
+  if (savedHost) return savedHost;
+
   return host;
 }
 

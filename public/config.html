@@ -372,9 +372,12 @@
 <script>
   function getBackendServer() {
     const origin = window.location.origin;
-    if (!origin || origin.includes('twitch.tv') || origin.includes('ext-twitch') || origin.includes('github.dev')) {
-      return 'https://twitchcrosswords.onrender.com';
+    if (origin && !origin.includes('twitch.tv') && !origin.includes('ext-twitch')) {
+      localStorage.setItem('cw_backend_origin', origin);
+      return origin;
     }
+    const saved = localStorage.getItem('cw_backend_origin');
+    if (saved) return saved;
     return origin;
   }
   const SERVER = getBackendServer();
