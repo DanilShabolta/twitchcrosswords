@@ -216,32 +216,37 @@
   </div>
 
   <script>
+    let currentChannel = new URLSearchParams(window.location.search).get('channel') || localStorage.getItem('cw_channel') || 'cptponos';
+
+    function getActiveChannel() {
+      const input = document.getElementById('channelInput').value.trim();
+      return (input || currentChannel).toLowerCase().replace('#', '');
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('channelInput').value = currentChannel;
       loadThemes();
       loadState();
 
       document.getElementById('saveChannelBtn').addEventListener('click', async () => {
-        const channel = document.getElementById('channelInput').value.trim();
+        const channel = document.getElementById('channelInput').value.trim().toLowerCase().replace('#', '');
         if (!channel) return alert('Введите имя канала');
-        
-        const res = await fetch('/api/channel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ channel })
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert(`Канал переключен на #${data.channel}`);
-          loadState();
-        }
+        currentChannel = channel;
+        localStorage.setItem('cw_channel', channel);
+        const url = new URL(window.location);
+        url.searchParams.set('channel', channel);
+        window.history.pushState({}, '', url);
+        alert(`Переключено на управление каналом #${channel}`);
+        loadState();
       });
 
       document.getElementById('newGameBtn').addEventListener('click', async () => {
+        const channel = getActiveChannel();
         const count = parseInt(document.getElementById('wordCountInput').value, 10) || 10;
         const res = await fetch('/api/new-game', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ wordCount: count })
+          body: JSON.stringify({ channel, wordCount: count })
         });
         const data = await res.json();
         if (data.success) {
@@ -250,6 +255,7 @@
       });
 
       document.getElementById('loadRandomOnlineBtn').addEventListener('click', async () => {
+        const channel = getActiveChannel();
         const category = document.getElementById('themeSelect').value;
         const statusEl = document.getElementById('loadStatus');
         statusEl.style.color = '#00F0FF';
@@ -259,7 +265,7 @@
           const res = await fetch('/api/load-online-crossword', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ source: 'random', category })
+            body: JSON.stringify({ channel, source: 'random', category })
           });
           const data = await res.json();
           if (data.error) {
@@ -277,6 +283,7 @@
       });
 
       document.getElementById('loadUrlBtn').addEventListener('click', async () => {
+        const channel = getActiveChannel();
         const url = document.getElementById('urlInput').value.trim();
         if (!url) return alert('Введите URL веб-страницы');
         
@@ -288,7 +295,7 @@
           const res = await fetch('/api/load-online-crossword', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ source: 'url', url })
+            body: JSON.stringify({ channel, source: 'url', url })
           });
           const data = await res.json();
           if (data.error) {
@@ -306,13 +313,14 @@
       });
 
       document.getElementById('revealBtn').addEventListener('click', async () => {
+        const channel = getActiveChannel();
         const num = parseInt(document.getElementById('revealNumInput').value, 10);
         if (!num) return alert('Укажите номер слова');
 
         const res = await fetch('/api/reveal-word', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ wordNumber: num })
+          body: JSON.stringify({ channel, wordNumber: num })
         });
         const data = await res.json();
         if (data.error) alert(data.error);
@@ -338,12 +346,12 @@
 
     async function loadState() {
       try {
-        const res = await fetch('/api/state');
+        const channel = getActiveChannel();
+        const res = await fetch(`/api/state?channel=${encodeURIComponent(channel)}`);
         const state = await res.json();
         
         document.getElementById('statChannel').textContent = `#${state.channel}`;
         document.getElementById('statProgress').textContent = `${state.stats.solvedWords} / ${state.stats.totalWords} (${state.stats.progressPercent}%)`;
-        document.getElementById('channelInput').value = state.channel;
 
         // Отрисовка логов
         const logContainer = document.getElementById('activityLog');

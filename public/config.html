@@ -448,6 +448,7 @@
   }
 
   async function loadByUrl() {
+    const channel = document.getElementById('input-channel').value.trim().replace('#', '') || 'cptponos';
     const url = document.getElementById('input-url').value.trim();
     if (!url) { showStatus('url-status-msg', '⚠️ Вставьте ссылку на кроссворд', 'error'); return; }
 
@@ -458,7 +459,7 @@
       const r = await fetch(SERVER + '/api/load-online-crossword', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: 'url', url })
+        body: JSON.stringify({ channel, source: 'url', url })
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Ошибка загрузки');
@@ -490,6 +491,7 @@
   loadThemes();
 
   async function loadByTheme() {
+    const channel = document.getElementById('input-channel').value.trim().replace('#', '') || 'cptponos';
     const category = document.getElementById('select-theme').value;
     setLoading('btn-load-theme', 'btn-theme-label', true);
     showStatus('theme-status-msg', '⏳ Загрузка кроссворда…', 'info');
@@ -498,7 +500,7 @@
       const r = await fetch(SERVER + '/api/load-online-crossword', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: 'theme', category })
+        body: JSON.stringify({ channel, source: 'theme', category })
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Ошибка загрузки');

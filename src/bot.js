@@ -2,37 +2,43 @@ const WebSocket = require('ws');
 const config = require('../config');
 
 /**
- * Twitch IRC Chat Bot using WebSocket connection.
- * Listens for user guesses like "1. свияж" or "1 свияж" in Twitch Chat.
+ * Multi-channel Twitch IRC Chat Bot.
+ * Connects to Twitch IRC WebSocket and listens to multiple channels simultaneously.
+ * Parses user guesses like "1. свияж" or "1 свияж" in each channel.
  */
 class TwitchBot {
   constructor(onAnswerReceived, onLogMessage) {
     this.ws = null;
-    this.channel = (config.TWITCH_CHANNEL || "channel_name").toLowerCase().replace('#', '');
-    this.token = config.TWITCH_TOKEN;
+    this.channels = new Set();
+    this.token = config.TWITCH_TOKEN || "";
     this.botUsername = (config.BOT_USERNAME || "CrosswordBot").toLowerCase();
-    this.onAnswerReceived = onAnswerReceived;
+    this.onAnswerReceived = onAnswerReceived; // (channel, data) => void
     this.onLogMessage = onLogMessage || console.log;
     this.pingInterval = null;
     this.isConnected = false;
   }
 
   connect() {
-    this.onLogMessage(`[TwitchBot] Подключение к чату Twitch для канала: #${this.channel}...`);
+    this.onLogMessage(`[TwitchBot] Подключение к IRC чату Twitch...`);
     this.ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
 
     this.ws.on('open', () => {
       this.isConnected = true;
-      this.onLogMessage(`[TwitchBot] WebSocket соединение установлено.`);
+      this.onLogMessage(`[TwitchBot] IRC WebSocket соединение установлено.`);
 
-      // Отправляем команды авторизации IRC Twitch
       const passToken = this.token.startsWith('oauth:') ? this.token : `oauth:${this.token}`;
       this.ws.send(`CAP REQ :twitch.tv/tags twitch.tv/commands`);
       this.ws.send(`PASS ${passToken}`);
       this.ws.send(`NICK ${this.botUsername}`);
-      this.ws.send(`JOIN #${this.channel}`);
 
-      // Запускаем PING каждые 4 минуты для поддержания связи
+      // Переподключаемся ко всем затребованным каналам
+      this.channels.forEach(ch => {
+        this.ws.send(`JOIN #${ch}`);
+        this.onLogMessage(`[TwitchBot] Подключен к каналу #${ch}`);
+      });
+
+      // PING каждые 4 минуты для поддержания связи
+      clearInterval(this.pingInterval);
       this.pingInterval = setInterval(() => {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           this.ws.send('PING :tmi.twitch.tv');
@@ -41,8 +47,7 @@ class TwitchBot {
     });
 
     this.ws.on('message', (data) => {
-      const message = data.toString();
-      this.handleIrcMessage(message);
+      this.handleIrcMessage(data.toString());
     });
 
     this.ws.on('error', (err) => {
@@ -51,7 +56,7 @@ class TwitchBot {
 
     this.ws.on('close', () => {
       this.isConnected = false;
-      this.onLogMessage(`[TwitchBot] Соединение разорвано. Переподключение через 5 секунд...`);
+      this.onLogMessage(`[TwitchBot] IRC соединение разорвано. Переподключение через 5 секунд...`);
       clearInterval(this.pingInterval);
       setTimeout(() => this.connect(), 5000);
     });
@@ -70,29 +75,43 @@ class TwitchBot {
   reconnect() {
     this.onLogMessage(`[TwitchBot] Переподключение с новыми настройками...`);
     if (this.ws) {
-      this._manualReconnect = true;
       this.ws.terminate();
     } else {
       this.connect();
     }
   }
 
-  setChannel(newChannel) {
-    if (!newChannel) return;
-    const cleanChannel = newChannel.toLowerCase().replace('#', '').trim();
-    if (this.channel !== cleanChannel) {
-      if (this.isConnected && this.ws) {
-        this.ws.send(`PART #${this.channel}`);
-        this.ws.send(`JOIN #${cleanChannel}`);
+  joinChannel(channelName) {
+    if (!channelName) return;
+    const clean = channelName.toLowerCase().replace('#', '').trim();
+    if (!clean) return;
+
+    if (!this.channels.has(clean)) {
+      this.channels.add(clean);
+      if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(`JOIN #${clean}`);
+        this.onLogMessage(`[TwitchBot] Вход на канал #${clean}`);
       }
-      this.channel = cleanChannel;
-      this.onLogMessage(`[TwitchBot] Переключен на канал #${this.channel}`);
     }
   }
 
-  sendMessage(text) {
+  leaveChannel(channelName) {
+    if (!channelName) return;
+    const clean = channelName.toLowerCase().replace('#', '').trim();
+    if (this.channels.has(clean)) {
+      this.channels.delete(clean);
+      if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(`PART #${clean}`);
+        this.onLogMessage(`[TwitchBot] Выход с канала #${clean}`);
+      }
+    }
+  }
+
+  sendMessage(channelName, text) {
+    if (!channelName || !text) return;
+    const clean = channelName.toLowerCase().replace('#', '').trim();
     if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(`PRIVMSG #${this.channel} :${text}`);
+      this.ws.send(`PRIVMSG #${clean} :${text}`);
     }
   }
 
@@ -102,13 +121,11 @@ class TwitchBot {
     lines.forEach(line => {
       if (!line) return;
 
-      // Ответ на PING от Twitch
       if (line.startsWith('PING')) {
         this.ws.send('PONG :tmi.twitch.tv');
         return;
       }
 
-      // Парсим PRIVMSG (сообщения из чата)
       if (line.includes('PRIVMSG')) {
         this.parseChatMessage(line);
       }
@@ -126,20 +143,22 @@ class TwitchBot {
         displayName = tagMatch[1];
       }
 
-      // Извлекаем ник из префикса юзера
+      // Извлекаем ник автора из префикса юзера
       const userMatch = rawLine.match(/:([^!]+)!/);
       if (userMatch && userMatch[1]) {
         username = userMatch[1];
         if (displayName === "Viewer") displayName = username;
       }
 
-      // Извлекаем сам текст сообщения
-      const msgIndex = rawLine.indexOf(`PRIVMSG #${this.channel} :`);
-      if (msgIndex === -1) return;
+      // Извлекаем название канала и текст сообщения
+      // Пример PRIVMSG: :nick!nick@user.tmi.twitch.tv PRIVMSG #channelname :text
+      const privmsgMatch = rawLine.match(/PRIVMSG #([^\s:]+)\s*:(.+)$/i);
+      if (!privmsgMatch) return;
 
-      const chatText = rawLine.substring(msgIndex + `PRIVMSG #${this.channel} :`.length).trim();
+      const channel = privmsgMatch[1].toLowerCase().trim();
+      const chatText = privmsgMatch[2].trim();
 
-      // Ищем шаблоны вроде "1. свияжск", "1 свияжск", "!1 свияжск", "#1 свияжск", "1: свияжск"
+      // Ищем варианты ответов: "1. свияжск", "1 свияжск", "!1 свияжск", "#1 свияжск"
       const regex = /^(?:!|#)?(\d+)[\.\s:\-]+\s*(.+)$/i;
       const match = chatText.match(regex);
 
@@ -148,7 +167,7 @@ class TwitchBot {
         const answerText = match[2].trim();
 
         if (!isNaN(questionNum) && answerText) {
-          this.onAnswerReceived({
+          this.onAnswerReceived(channel, {
             username: displayName,
             userLogin: username,
             questionNumber: questionNum,

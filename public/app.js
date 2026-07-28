@@ -58,6 +58,18 @@ function updateVisibilityUI() {
   }
 }
 
+// Извлечение имени текущего канала
+function getChannel() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const fromQuery = urlParams.get('channel') || urlParams.get('channel_name');
+  if (fromQuery) return fromQuery.toLowerCase().replace('#', '').trim();
+
+  const saved = localStorage.getItem('cw_channel');
+  if (saved) return saved.toLowerCase().replace('#', '').trim();
+
+  return 'cptponos';
+}
+
 // Определяем хост сервера расширения
 function getBackendHost() {
   const host = window.location.host;
@@ -68,14 +80,15 @@ function getBackendHost() {
   return host;
 }
 
-// Подключение по WebSocket к серверу расширения
+// Подключение по WebSocket к серверу расширения для конкретного канала
 function connectWebSocket() {
   const host = getBackendHost();
+  const channel = getChannel();
   const isSecure = window.location.protocol === 'https:' || host.includes('railway.app');
   const protocol = isSecure ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${host}`;
+  const wsUrl = `${protocol}//${host}/ws?channel=${encodeURIComponent(channel)}`;
 
-  console.log('[Extension] Подключение к WebSocket:', wsUrl);
+  console.log(`[Extension] Подключение к WebSocket (${channel}):`, wsUrl);
 
   socket = new WebSocket(wsUrl);
 
