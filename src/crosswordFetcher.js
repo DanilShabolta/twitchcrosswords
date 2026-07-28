@@ -75,6 +75,11 @@ const ONLINE_THEMES = {
       { word: "МЕТЕОР", clue: "Светящийся след в небе от сгорающего метеорита", category: "Наука" },
       { word: "ЛАЗЕР", clue: "Устройство, создающее узкий пучок интенсивного света", category: "Наука" }
     ]
+  },
+  absite: {
+    name: "🎲 absite.ru — Случайный кроссворд (из 7900+)",
+    isDynamic: true,
+    words: []
   }
 };
 
@@ -87,7 +92,7 @@ class CrosswordFetcher {
     return Object.keys(ONLINE_THEMES).map(key => ({
       id: key,
       name: ONLINE_THEMES[key].name,
-      count: ONLINE_THEMES[key].words.length
+      count: ONLINE_THEMES[key].words ? ONLINE_THEMES[key].words.length : 7900
     }));
   }
 
@@ -95,7 +100,23 @@ class CrosswordFetcher {
    * Загрузить случайный кроссворд с внешнего веб-ресурса или из онлайн-базы
    */
   static async fetchRandomOnline(requestedCategory = null) {
-    if (requestedCategory && ONLINE_THEMES[requestedCategory]) {
+    if (requestedCategory === 'absite') {
+      try {
+        const randomId = Math.floor(Math.random() * 7800) + 100;
+        const res = await this.fetchFromUrl(`https://absite.ru/crossw/${randomId}.html`);
+        if (res && res.words && res.words.length >= 5) {
+          return res;
+        }
+      } catch (e) {
+        console.warn("[CrosswordFetcher] Ошибка загрузки по ID с absite.ru, пробуем rand.html:", e.message);
+        try {
+          const res = await this.fetchFromUrl('https://absite.ru/crossw/rand.html');
+          if (res && res.words && res.words.length >= 5) return res;
+        } catch (err) {}
+      }
+    }
+
+    if (requestedCategory && ONLINE_THEMES[requestedCategory] && ONLINE_THEMES[requestedCategory].words.length > 0) {
       const theme = ONLINE_THEMES[requestedCategory];
       return {
         title: theme.name,
@@ -117,7 +138,7 @@ class CrosswordFetcher {
       console.warn("[CrosswordFetcher] Ошибка получения из сети:", e.message);
     }
 
-    const keys = Object.keys(ONLINE_THEMES);
+    const keys = Object.keys(ONLINE_THEMES).filter(k => ONLINE_THEMES[k].words.length > 0);
     const randomKey = keys[Math.floor(Math.random() * keys.length)];
     const selectedTheme = ONLINE_THEMES[randomKey];
 
@@ -151,6 +172,13 @@ class CrosswordFetcher {
       return { title: `Кроссворд с graycell.ru`, sourceUrl: url, words: words.slice(0, 25) };
     }
 
+    // Специальный парсер для absite.ru
+    if (hostname.includes('absite.ru')) {
+      const parsed = this.parseAbsite(htmlContent);
+      if (!parsed.words || parsed.words.length === 0) throw new Error("Не удалось извлечь данные кроссворда с absite.ru");
+      return { title: parsed.title || `Кроссворд с absite.ru`, sourceUrl: url, words: parsed.words.slice(0, 25) };
+    }
+
     const words = this.extractWordsAndCluesFromHtml(htmlContent);
 
     if (words.length === 0) {
@@ -162,6 +190,70 @@ class CrosswordFetcher {
       sourceUrl: url,
       words: words.slice(0, 20)
     };
+  }
+
+  /**
+   * Специальный парсер для сайта absite.ru (Абсолютно Бесполезный Сайт)
+   */
+  static parseAbsite(html) {
+    const extracted = [];
+    const seenWords = new Set();
+
+    const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+    const title = titleMatch ? titleMatch[1].replace(/&ndash;|-/g, ' ').replace(/\s+/g, ' ').trim() : 'Кроссворд с absite.ru';
+
+    // Блок ответов (<div id="ans"...>)
+    const ansMatch = html.match(/<div\s+id=["']ans["'][^>]*>([\s\S]*?)<\/div>/i);
+    if (!ansMatch) return { title, words: [] };
+
+    const ansHtml = ansMatch[1];
+    const horizAnsPart = (ansHtml.split(/<b>\s*По вертикали/i)[0] || '');
+    const vertAnsPart = (ansHtml.split(/<b>\s*По вертикали/i)[1] || '');
+
+    // Блок вопросов (<h2...Вопросы кроссворда...>)
+    const qSectionMatch = html.match(/<h2[^>]*>Вопросы кроссворда<\/h2>([\s\S]*?)(?:<h2|<div\s+style=["']height:20px)/i) || html.match(/<div class="cr-clues"[\s\S]*?<\/div>\s*<\/div>/i);
+    const qHtml = qSectionMatch ? qSectionMatch[1] : html;
+
+    const horizQPart = (qHtml.split(/<b>\s*По вертикали/i)[0] || '');
+    const vertQPart = (qHtml.split(/<b>\s*По вертикали/i)[1] || '');
+
+    const parsePairs = (partHtml) => {
+      const map = {};
+      const regex = /<b>\s*(\d+)\s*<\/b>\s*[\.\&nbsp;\s]*([^<]+)/gi;
+      let m;
+      while ((m = regex.exec(partHtml)) !== null) {
+        const num = parseInt(m[1], 10);
+        let val = m[2].replace(/&nbsp;/g, ' ').replace(/^\.|\.$/g, '').trim();
+        if (num && val) map[num] = val;
+      }
+      return map;
+    };
+
+    const horizAnswers = parsePairs(horizAnsPart);
+    const vertAnswers = parsePairs(vertAnsPart);
+
+    const horizClues = parsePairs(horizQPart);
+    const vertClues = parsePairs(vertQPart);
+
+    for (const num in horizAnswers) {
+      let word = horizAnswers[num].toUpperCase().replace(/Ё/g, 'Е').replace(/[^А-ЯA-Z]/g, '');
+      let clue = horizClues[num];
+      if (word && word.length >= 3 && clue && !seenWords.has(word)) {
+        seenWords.add(word);
+        extracted.push({ word, clue, category: 'absite.ru' });
+      }
+    }
+
+    for (const num in vertAnswers) {
+      let word = vertAnswers[num].toUpperCase().replace(/Ё/g, 'Е').replace(/[^А-ЯA-Z]/g, '');
+      let clue = vertClues[num];
+      if (word && word.length >= 3 && clue && !seenWords.has(word)) {
+        seenWords.add(word);
+        extracted.push({ word, clue, category: 'absite.ru' });
+      }
+    }
+
+    return { title, words: extracted };
   }
 
   /**
