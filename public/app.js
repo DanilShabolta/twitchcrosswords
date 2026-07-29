@@ -73,10 +73,19 @@ function getChannel() {
 // Определяем хост сервера расширения
 function getBackendHost() {
   const host = window.location.host;
-  // Если страница загружена внутри Twitch CDN или iframe — подключаемся к вечному туннелю
-  if (!host || host.includes('twitch.tv') || host.includes('ext-twitch')) {
-    return 'cptponos-twitch-crossword.loca.lt';
+  // Если открыто напрямую — запоминаем текущий рабочий адрес туннеля
+  if (host && !host.includes('twitch.tv') && !host.includes('ext-twitch')) {
+    localStorage.setItem('cw_backend_host', host);
+    return host;
   }
+  // Если внутри Twitch iframe — берем параметр ?backend или ранее сохраненный адрес
+  const urlParams = new URLSearchParams(window.location.search);
+  const fromQuery = urlParams.get('backend');
+  if (fromQuery) return fromQuery.replace(/^https?:\/\//, '');
+
+  const savedHost = localStorage.getItem('cw_backend_host');
+  if (savedHost) return savedHost;
+
   return host;
 }
 
