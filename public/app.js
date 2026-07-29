@@ -75,7 +75,7 @@ function getBackendHost() {
   const host = window.location.host;
   // Если страница загружена внутри Twitch CDN или iframe — подключаемся к вечному туннелю
   if (!host || host.includes('twitch.tv') || host.includes('ext-twitch')) {
-    return 'cptponos-crossword.loca.lt';
+    return 'cptponos-twitch-crossword.loca.lt';
   }
   return host;
 }
