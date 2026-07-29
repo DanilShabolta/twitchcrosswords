@@ -12,6 +12,17 @@ let lastProcessedActivityId = null;
 document.addEventListener('DOMContentLoaded', () => {
   initUIState();
   connectWebSocket();
+
+  // Инициализация официального Twitch Extension Helper SDK
+  if (window.Twitch && window.Twitch.ext) {
+    window.Twitch.ext.onAuthorized((auth) => {
+      console.log('[Twitch Ext] Авторизован на канале:', auth.channelId);
+    });
+
+    window.Twitch.ext.onContext((context) => {
+      console.log('[Twitch Ext] Контекст видеоплеера:', context);
+    });
+  }
 });
 
 // Загрузка состояния видимости оверлея
