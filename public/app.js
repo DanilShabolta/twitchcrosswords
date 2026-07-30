@@ -8,15 +8,18 @@ let activeTab = 'grid'; // 'grid' | 'clues' | 'leaderboard'
 let leaderboardSubTab = 'round'; // 'round' | 'allTime'
 let isVisible = true;
 let lastProcessedActivityId = null;
+let lastRoundId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initUIState();
+  fetchInitialState();
   connectWebSocket();
 
   // Инициализация официального Twitch Extension Helper SDK
   if (window.Twitch && window.Twitch.ext) {
     window.Twitch.ext.onAuthorized((auth) => {
       console.log('[Twitch Ext] Авторизован на канале:', auth.channelId);
+      fetchInitialState();
     });
 
     window.Twitch.ext.onContext((context) => {
@@ -24,6 +27,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+async function fetchInitialState() {
+  const host = getBackendHost();
+  const channel = getChannel();
+  const isSecure = window.location.protocol === 'https:' || host.includes('trycloudflare.com') || host.includes('railway.app');
+  const protocol = isSecure ? 'https:' : 'http:';
+  const apiUrl = `${protocol}//${host}/api/state?channel=${encodeURIComponent(channel)}`;
+
+  try {
+    const res = await fetch(apiUrl);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.gameData) {
+        onStateUpdate(data);
+      } else {
+        const createRes = await fetch(`${protocol}//${host}/api/new-game`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channel, wordCount: 10 })
+        });
+        if (createRes.ok) {
+          const freshState = await fetch(apiUrl).then(r => r.json());
+          onStateUpdate(freshState);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Extension] Ошибка HTTP начальной загрузки:', err);
+  }
+}
+
+async function requestNewGame() {
+  const host = getBackendHost();
+  const channel = getChannel();
+  const isSecure = window.location.protocol === 'https:' || host.includes('trycloudflare.com') || host.includes('railway.app');
+  const protocol = isSecure ? 'https:' : 'http:';
+  
+  const connText = document.getElementById('connStatusText');
+  if (connText) connText.textContent = 'Генерация кроссворда...';
+
+  try {
+    await fetch(`${protocol}//${host}/api/new-game`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel, wordCount: 10 })
+    });
+  } catch (e) {
+    console.error('Ошибка запроса новой игры:', e);
+  }
+}
 
 // Загрузка состояния видимости оверлея
 function initUIState() {
@@ -119,6 +172,8 @@ function connectWebSocket() {
 
   socket.onopen = () => {
     console.log('[Extension] Соединение с сервером установлено');
+    const connText = document.getElementById('connStatusText');
+    if (connText) connText.textContent = 'Загрузка сетки кроссворда...';
   };
 
   socket.onmessage = (event) => {
@@ -177,7 +232,7 @@ function onStateUpdate(newState) {
 function updateHeader() {
   if (!currentGameState) return;
 
-  const percent = currentGameState.stats.progressPercent || 0;
+  const percent = currentGameState.stats ? (currentGameState.stats.progressPercent || 0) : 0;
   const fill = document.getElementById('progressFill');
   const badge = document.getElementById('progressBadge');
 
