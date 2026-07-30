@@ -7,6 +7,7 @@ ssl/
 
 # Данные игры
 data/leaderboard.json
+data/bot_config.json
 
 # Временные файлы
 scratch/

@@ -342,6 +342,35 @@ app.post('/api/load-online-crossword', async (req, res) => {
   }
 });
 
+const BOT_CONFIG_FILE = path.join(__dirname, 'data', 'bot_config.json');
+
+function saveBotConfigToFile(cfg) {
+  try {
+    const dir = path.dirname(BOT_CONFIG_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(BOT_CONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Ошибка сохранения bot_config.json:', e);
+  }
+}
+
+function loadBotConfigFromFile() {
+  try {
+    if (fs.existsSync(BOT_CONFIG_FILE)) {
+      const data = JSON.parse(fs.readFileSync(BOT_CONFIG_FILE, 'utf8'));
+      if (data.token && data.channel) {
+        bot.setToken(data.token);
+        if (data.botUsername) bot.setBotUsername(data.botUsername);
+        const room = getOrCreateRoom(data.channel);
+        bot.joinChannel(room.channel);
+        console.log(`[BotConfig] Восстановлены настройки бота для #${room.channel}`);
+      }
+    }
+  } catch (e) {
+    console.error('Ошибка восстановления bot_config.json:', e);
+  }
+}
+
 app.post('/api/bot-config', (req, res) => {
   const { channel, token, botUsername } = req.body;
   if (!channel || !token) {
@@ -352,6 +381,7 @@ app.post('/api/bot-config', (req, res) => {
   const room = getOrCreateRoom(channel);
   bot.joinChannel(room.channel);
   bot.reconnect();
+  saveBotConfigToFile({ channel: room.channel, token, botUsername: bot.botUsername });
   res.json({ success: true, channel: room.channel, botUsername: bot.botUsername });
 });
 
@@ -369,8 +399,9 @@ app.post('/api/reveal-word', (req, res) => {
   }
 });
 
-// Инициализация комнаты по умолчанию
+// Инициализация комнаты по умолчанию и авто-восстановление настроек бота
 getOrCreateRoom(config.TWITCH_CHANNEL);
+loadBotConfigFromFile();
 
 const listenPort = useHttps ? config.HTTPS_PORT : config.PORT;
 server.listen(listenPort, () => {

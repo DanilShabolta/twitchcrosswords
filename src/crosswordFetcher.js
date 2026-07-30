@@ -169,14 +169,14 @@ class CrosswordFetcher {
     if (hostname.includes('graycell.ru')) {
       const words = this.parseGraycell(htmlContent);
       if (words.length === 0) throw new Error("Не удалось извлечь данные кроссворда с graycell.ru");
-      return { title: `Кроссворд с graycell.ru`, sourceUrl: url, words: words.slice(0, 25) };
+      return { title: `Кроссворд с graycell.ru`, sourceUrl: url, words: words };
     }
 
     // Специальный парсер для absite.ru
     if (hostname.includes('absite.ru')) {
       const parsed = this.parseAbsite(htmlContent);
       if (!parsed.words || parsed.words.length === 0) throw new Error("Не удалось извлечь данные кроссворда с absite.ru");
-      return { title: parsed.title || `Кроссворд с absite.ru`, sourceUrl: url, words: parsed.words.slice(0, 25) };
+      return { title: parsed.title || `Кроссворд с absite.ru`, sourceUrl: url, words: parsed.words };
     }
 
     const words = this.extractWordsAndCluesFromHtml(htmlContent);
@@ -188,7 +188,7 @@ class CrosswordFetcher {
     return {
       title: `Кроссворд с сайта ${hostname}`,
       sourceUrl: url,
-      words: words.slice(0, 20)
+      words: words
     };
   }
 

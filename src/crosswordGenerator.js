@@ -5,14 +5,15 @@ const { getRandomWords, DICTIONARY } = require('./dictionary');
  * Автоматически строит сетку с пересечениями слов.
  */
 class CrosswordGenerator {
-  constructor(gridSize = 19) {
+  constructor(gridSize = 23) {
     this.gridSize = gridSize;
   }
 
-  generate(customWords = null, wordCount = 12) {
+  generate(customWords = null, wordCount = 20) {
+    const targetCount = customWords && customWords.length > 0 ? customWords.length : wordCount;
     const candidateWords = customWords && customWords.length > 0
       ? customWords
-      : getRandomWords(Math.max(wordCount * 2, 20));
+      : getRandomWords(Math.max(targetCount * 2, 20));
 
     // Сортируем слова по длине (сначала длинные) для лучшей плотности
     const pool = [...candidateWords].sort((a, b) => b.word.length - a.word.length);
