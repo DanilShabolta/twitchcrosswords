@@ -78,15 +78,19 @@ async function requestNewGame() {
   }
 }
 
-// Загрузка состояния видимости оверлея
+let currentZoom = 100;
+
+// Загрузка состояния видимости оверлея и инициализация кнопок
 function initUIState() {
   const savedState = localStorage.getItem('twitch_crossword_visible');
+  
   if (savedState !== null) {
     isVisible = savedState === 'true';
   }
-  updateVisibilityUI();
 
-  // Настройка кнопки Скрыть/Показать
+  updateVisibilityUI();
+  initZoomControls();
+
   const toggleBtn = document.getElementById('toggleBtn');
   if (toggleBtn) {
     toggleBtn.addEventListener('click', () => {
@@ -96,15 +100,75 @@ function initUIState() {
     });
   }
 
-  // Переключение вкладок
-  document.querySelectorAll('.tab-btn').forEach(btn => {
+  // Табы
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  tabBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      tabBtns.forEach(b => b.classList.remove('active'));
       e.target.classList.add('active');
       activeTab = e.target.getAttribute('data-tab');
       renderActiveTab();
     });
   });
+}
+
+function initZoomControls() {
+  const savedZoom = localStorage.getItem('cw_grid_zoom');
+  if (savedZoom) {
+    currentZoom = parseInt(savedZoom, 10) || 100;
+  }
+  applyZoom();
+
+  const outBtn = document.getElementById('zoomOutBtn');
+  const inBtn = document.getElementById('zoomInBtn');
+  const resetBtn = document.getElementById('zoomResetBtn');
+
+  if (outBtn) {
+    outBtn.addEventListener('click', () => {
+      if (currentZoom > 60) {
+        currentZoom -= 15;
+        applyZoom();
+      }
+    });
+  }
+
+  if (inBtn) {
+    inBtn.addEventListener('click', () => {
+      if (currentZoom < 180) {
+        currentZoom += 15;
+        applyZoom();
+      }
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      currentZoom = 100;
+      applyZoom();
+    });
+  }
+}
+
+function applyZoom() {
+  const zoomVal = document.getElementById('zoomVal');
+  if (zoomVal) zoomVal.textContent = `${currentZoom}%`;
+
+  localStorage.setItem('cw_grid_zoom', currentZoom);
+
+  const baseSize = 28;
+  const newSize = Math.round((baseSize * currentZoom) / 100);
+  const newFont = Math.max(9, Math.round((13 * currentZoom) / 100));
+  const newNumFont = Math.max(6, Math.round((8 * currentZoom) / 100));
+
+  document.documentElement.style.setProperty('--grid-cell-size', `${newSize}px`);
+  document.documentElement.style.setProperty('--grid-cell-font', `${newFont}px`);
+  document.documentElement.style.setProperty('--grid-num-font', `${newNumFont}px`);
+
+  const gridEl = document.querySelector('.crossword-grid');
+  if (gridEl && currentGameState && currentGameState.gameData) {
+    gridEl.style.gridTemplateColumns = `repeat(${currentGameState.gameData.cols}, ${newSize}px)`;
+    gridEl.style.gridTemplateRows = `repeat(${currentGameState.gameData.rows}, ${newSize}px)`;
+  }
 }
 
 function updateVisibilityUI() {
@@ -262,10 +326,13 @@ function renderGridView(container) {
   const wrapper = document.createElement('div');
   wrapper.className = 'crossword-grid-wrapper';
 
+  const baseSize = 28;
+  const newSize = Math.round((baseSize * currentZoom) / 100);
+
   const gridEl = document.createElement('div');
   gridEl.className = 'crossword-grid';
-  gridEl.style.gridTemplateColumns = `repeat(${cols}, 28px)`;
-  gridEl.style.gridTemplateRows = `repeat(${rows}, 28px)`;
+  gridEl.style.gridTemplateColumns = `repeat(${cols}, ${newSize}px)`;
+  gridEl.style.gridTemplateRows = `repeat(${rows}, ${newSize}px)`;
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
