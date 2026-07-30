@@ -72,7 +72,7 @@ function updateVisibilityUI() {
 // Извлечение имени текущего канала
 function getChannel() {
   const urlParams = new URLSearchParams(window.location.search);
-  const fromQuery = urlParams.get('channel') || urlParams.get('channel_name');
+  const fromQuery = urlParams.get('channel') || urlParams.get('channel_name') || urlParams.get('login');
   if (fromQuery) return fromQuery.toLowerCase().replace('#', '').trim();
 
   const saved = localStorage.getItem('cw_channel');
@@ -107,7 +107,7 @@ function getBackendHost() {
 function connectWebSocket() {
   const host = getBackendHost();
   const channel = getChannel();
-  const isSecure = window.location.protocol === 'https:' || host.includes('railway.app');
+  const isSecure = window.location.protocol === 'https:' || host.includes('railway.app') || host.includes('trycloudflare.com');
   const protocol = isSecure ? 'wss:' : 'ws:';
   const wsUrl = `${protocol}//${host}/ws?channel=${encodeURIComponent(channel)}`;
 
@@ -145,7 +145,14 @@ function connectWebSocket() {
 }
 
 function onStateUpdate(newState) {
+  const isNewRound = lastRoundId !== null && (lastRoundId !== newState.currentRound || (newState.gameData && newState.gameData.title !== (currentGameState && currentGameState.gameData && currentGameState.gameData.title)));
+  
   currentGameState = newState;
+  lastRoundId = newState.currentRound;
+
+  if (isNewRound) {
+    showToast('✨ Запущен новый кроссворд!', 'info');
+  }
 
   // Проверяем последние события для отображения уведомлений (верно / неверно)
   if (newState.recentActivity && newState.recentActivity.length > 0) {

@@ -147,6 +147,7 @@ function startNewGameForRoom(room, wordCount = 10, customWords = null, title = n
   }
 
   room.active = true;
+  room.currentRound = (room.currentRound || 0) + 1;
   room.gameData = crossword;
   room.stats = {
     totalWords: crossword.words.length,
