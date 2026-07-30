@@ -370,18 +370,32 @@
   </div>
 
 </div>
-<script>
+  const DEFAULT_BACKEND = 'https://warner-attacks-drainage-exclude.trycloudflare.com';
+
   function getBackendServer() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromQuery = urlParams.get('backend') || urlParams.get('server');
+    if (fromQuery) {
+      const formatted = fromQuery.startsWith('http') ? fromQuery : 'https://' + fromQuery;
+      localStorage.setItem('cw_backend_origin', formatted);
+      return formatted;
+    }
+
+    const saved = localStorage.getItem('cw_backend_origin');
+    if (saved && !saved.includes('twitch.tv') && !saved.includes('ext-twitch')) {
+      return saved;
+    }
+
     const origin = window.location.origin;
     if (origin && !origin.includes('twitch.tv') && !origin.includes('ext-twitch')) {
       localStorage.setItem('cw_backend_origin', origin);
       return origin;
     }
-    const saved = localStorage.getItem('cw_backend_origin');
-    if (saved) return saved;
-    return origin;
+
+    return DEFAULT_BACKEND;
   }
-  const SERVER = getBackendServer();
+
+  let SERVER = getBackendServer();
 
   function toggleEye() {
     const inp = document.getElementById('input-token');

@@ -81,23 +81,26 @@ function getChannel() {
   return 'cptponos';
 }
 
+const DEFAULT_BACKEND_HOST = 'warner-attacks-drainage-exclude.trycloudflare.com';
+
 // Определяем хост сервера расширения
 function getBackendHost() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const fromQuery = urlParams.get('backend') || urlParams.get('server');
+  if (fromQuery) return fromQuery.replace(/^https?:\/\//, '');
+
+  const savedHost = localStorage.getItem('cw_backend_host');
+  if (savedHost && !savedHost.includes('twitch.tv') && !savedHost.includes('ext-twitch')) {
+    return savedHost;
+  }
+
   const host = window.location.host;
-  // Если открыто напрямую — запоминаем текущий рабочий адрес туннеля
   if (host && !host.includes('twitch.tv') && !host.includes('ext-twitch')) {
     localStorage.setItem('cw_backend_host', host);
     return host;
   }
-  // Если внутри Twitch iframe — берем параметр ?backend или ранее сохраненный адрес
-  const urlParams = new URLSearchParams(window.location.search);
-  const fromQuery = urlParams.get('backend');
-  if (fromQuery) return fromQuery.replace(/^https?:\/\//, '');
 
-  const savedHost = localStorage.getItem('cw_backend_host');
-  if (savedHost) return savedHost;
-
-  return host;
+  return DEFAULT_BACKEND_HOST;
 }
 
 // Подключение по WebSocket к серверу расширения для конкретного канала
