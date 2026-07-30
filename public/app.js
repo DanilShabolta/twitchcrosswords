@@ -81,10 +81,18 @@ function getChannel() {
   return 'cptponos';
 }
 
-const DEFAULT_BACKEND_HOST = 'warner-attacks-drainage-exclude.trycloudflare.com';
+const DEFAULT_BACKEND_HOST = 'scroll-elections-real-attach.trycloudflare.com';
 
 // Определяем хост сервера расширения
 function getBackendHost() {
+  const host = window.location.host;
+  // 1. Если загружено с сервера туннеля — window.location.host всегда 100% точный актуальный адрес
+  if (host && !host.includes('twitch.tv') && !host.includes('ext-twitch')) {
+    localStorage.setItem('cw_backend_host', host);
+    return host;
+  }
+
+  // 2. Если внутри Twitch CDN iframe — проверяем URL параметр backend
   const urlParams = new URLSearchParams(window.location.search);
   const fromQuery = urlParams.get('backend') || urlParams.get('server');
   if (fromQuery) return fromQuery.replace(/^https?:\/\//, '');
@@ -92,12 +100,6 @@ function getBackendHost() {
   const savedHost = localStorage.getItem('cw_backend_host');
   if (savedHost && !savedHost.includes('twitch.tv') && !savedHost.includes('ext-twitch')) {
     return savedHost;
-  }
-
-  const host = window.location.host;
-  if (host && !host.includes('twitch.tv') && !host.includes('ext-twitch')) {
-    localStorage.setItem('cw_backend_host', host);
-    return host;
   }
 
   return DEFAULT_BACKEND_HOST;
