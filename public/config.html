@@ -263,47 +263,27 @@
     </div>
   </div>
 
-  <!-- Card 1: Bot Settings -->
+  <!-- Card 1: Channel Connection -->
   <div class="cfg-card">
-    <div class="card-head">🤖 Настройки бота</div>
+    <div class="card-head">📺 Канал Twitch</div>
 
     <div class="form-row">
-      <label for="input-channel">Название канала Twitch</label>
+      <label for="input-channel">Название вашего канала</label>
       <div class="input-wrap">
         <input id="input-channel" type="text" placeholder="cptponos" autocomplete="off" spellcheck="false" />
       </div>
-      <span class="hint">Без символа <code>#</code>. Именно в этот канал бот будет писать и читать чат.</span>
+      <span class="hint">Канал определяется автоматически из Twitch. Бот подключается к чату этого канала.</span>
     </div>
 
-    <div class="form-row">
-      <label for="input-token">OAuth токен бота</label>
-      <div class="input-wrap">
-        <input id="input-token" type="password" placeholder="oauth:xxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false" />
-        <button class="eye-btn" id="eye-btn" onclick="toggleEye()" title="Показать / скрыть токен">👁️</button>
-      </div>
-      <span class="hint">
-        Получить токен: <a href="https://twitchapps.com/tmi/" target="_blank" rel="noopener">twitchapps.com/tmi</a>
-        — войди под аккаунтом бота и скопируй токен. Начинается с <code>oauth:</code>.
-      </span>
-    </div>
-
-    <div class="form-row">
-      <label for="input-botname">Логин аккаунта бота</label>
-      <div class="input-wrap">
-        <input id="input-botname" type="text" placeholder="CrosswordBot" autocomplete="off" spellcheck="false" />
-      </div>
-      <span class="hint">Логин Twitch-аккаунта, которому принадлежит токен выше.</span>
-    </div>
-
-    <button class="btn btn-purple" id="btn-save-bot" onclick="saveBotConfig()">
-      <span id="btn-save-label">💾 Сохранить и подключить бота</span>
+    <button class="btn btn-purple" id="btn-save-bot" onclick="connectChannelBot()">
+      <span id="btn-save-label">🔄 Сгенерировать новый кроссворд</span>
     </button>
 
     <div class="status-bar" id="bot-status-msg"></div>
 
     <div class="bot-status">
       <span class="dot" id="conn-dot"></span>
-      <span id="conn-label">Статус: проверка…</span>
+      <span id="conn-label">Статус: подключение…</span>
     </div>
   </div>
 
@@ -432,42 +412,77 @@
       label.textContent = 'Сервер недоступен';
     }
   }
+  // Автоматическое определение названия канала из Twitch Extension Helper или параметров URL
+  function detectChannel() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromQuery = urlParams.get('channel') || urlParams.get('channel_name') || urlParams.get('login');
+    if (fromQuery) return fromQuery.toLowerCase().replace('#', '').trim();
+
+    const saved = localStorage.getItem('cw_channel');
+    if (saved) return saved.toLowerCase().replace('#', '').trim();
+
+    return 'cptponos';
+  }
+
+  let activeChannel = detectChannel();
+  document.getElementById('input-channel').value = activeChannel;
+
+  if (window.Twitch && window.Twitch.ext) {
+    window.Twitch.ext.onAuthorized((auth) => {
+      if (auth && auth.channelId) {
+        console.log('[Twitch Ext Config] Авторизован канал ID:', auth.channelId);
+      }
+    });
+
+    window.Twitch.ext.onContext((context) => {
+      console.log('[Twitch Ext Config] Контекст:', context);
+    });
+  }
+
+  async function pollStatus() {
+    activeChannel = document.getElementById('input-channel').value.trim().replace('#', '') || detectChannel();
+    try {
+      const r = await fetch(SERVER + '/api/state?channel=' + encodeURIComponent(activeChannel));
+      if (!r.ok) throw new Error();
+      const data = await r.json();
+      dot.className = 'dot online';
+      label.textContent = 'Подключено к каналу #' + (data.channel || activeChannel);
+    } catch {
+      dot.className = 'dot offline';
+      label.textContent = 'Сервер недоступен';
+    }
+  }
   pollStatus();
   setInterval(pollStatus, 8000);
 
-  async function saveBotConfig() {
-    const channel     = document.getElementById('input-channel').value.trim().replace('#', '');
-    const token       = document.getElementById('input-token').value.trim();
-    const botUsername = document.getElementById('input-botname').value.trim();
-
-    if (!channel) { showStatus('bot-status-msg', '⚠️ Укажите название канала', 'error'); return; }
-    if (!token)   { showStatus('bot-status-msg', '⚠️ Вставьте OAuth токен бота', 'error'); return; }
+  async function connectChannelBot() {
+    activeChannel = document.getElementById('input-channel').value.trim().replace('#', '') || detectChannel();
+    if (!activeChannel) { showStatus('bot-status-msg', '⚠️ Укажите название канала', 'error'); return; }
 
     setLoading('btn-save-bot', 'btn-save-label', true);
     dot.className = 'dot pending';
-    label.textContent = 'Подключение…';
+    label.textContent = 'Генерация…';
 
     try {
-      const r = await fetch(SERVER + '/api/bot-config', {
+      const r = await fetch(SERVER + '/api/new-game', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel, token, botUsername })
+        body: JSON.stringify({ channel: activeChannel, wordCount: 10 })
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Ошибка сервера');
-      showStatus('bot-status-msg', '✅ Бот подключён к каналу #' + data.channel, 'success');
-      localStorage.setItem('cw_channel', channel);
-      localStorage.setItem('cw_botname', botUsername);
+      showStatus('bot-status-msg', '✅ Новый кроссворд запущен на канале #' + activeChannel, 'success');
+      localStorage.setItem('cw_channel', activeChannel);
     } catch (e) {
       showStatus('bot-status-msg', '❌ ' + e.message, 'error');
     } finally {
-      setLoading('btn-save-bot', 'btn-save-label', false, '💾 Сохранить и подключить бота');
+      setLoading('btn-save-bot', 'btn-save-label', false, '🔄 Сгенерировать новый кроссворд');
       pollStatus();
     }
   }
 
   async function loadByUrl() {
-    const channel = document.getElementById('input-channel').value.trim().replace('#', '') || 'cptponos';
+    activeChannel = document.getElementById('input-channel').value.trim().replace('#', '') || detectChannel();
     const url = document.getElementById('input-url').value.trim();
     if (!url) { showStatus('url-status-msg', '⚠️ Вставьте ссылку на кроссворд', 'error'); return; }
 
@@ -478,7 +493,7 @@
       const r = await fetch(SERVER + '/api/load-online-crossword', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel, source: 'url', url })
+        body: JSON.stringify({ channel: activeChannel, source: 'url', url })
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Ошибка загрузки');
@@ -510,7 +525,7 @@
   loadThemes();
 
   async function loadByTheme() {
-    const channel = document.getElementById('input-channel').value.trim().replace('#', '') || 'cptponos';
+    activeChannel = document.getElementById('input-channel').value.trim().replace('#', '') || detectChannel();
     const category = document.getElementById('select-theme').value;
     setLoading('btn-load-theme', 'btn-theme-label', true);
     showStatus('theme-status-msg', '⏳ Загрузка кроссворда…', 'info');
@@ -519,7 +534,7 @@
       const r = await fetch(SERVER + '/api/load-online-crossword', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel, source: 'theme', category })
+        body: JSON.stringify({ channel: activeChannel, source: 'theme', category })
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Ошибка загрузки');
@@ -530,11 +545,6 @@
       setLoading('btn-load-theme', 'btn-theme-label', false, '🎲 Загрузить случайный кроссворд по теме');
     }
   }
-
-  const savedCh = localStorage.getItem('cw_channel');
-  const savedBn = localStorage.getItem('cw_botname');
-  if (savedCh) document.getElementById('input-channel').value = savedCh;
-  if (savedBn) document.getElementById('input-botname').value = savedBn;
 </script>
 </body>
 </html>
