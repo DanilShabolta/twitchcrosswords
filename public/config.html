@@ -418,8 +418,12 @@
     const fromQuery = urlParams.get('channel') || urlParams.get('channel_name') || urlParams.get('login');
     if (fromQuery) return fromQuery.toLowerCase().replace('#', '').trim();
 
-    const saved = localStorage.getItem('cw_channel');
-    if (saved) return saved.toLowerCase().replace('#', '').trim();
+    // Если открыто внутри ифрейма Twitch — не берём устаревший localStorage другого канала
+    const isTwitchIframe = window.location.origin.includes('twitch.tv') || window.location.origin.includes('ext-twitch');
+    if (!isTwitchIframe) {
+      const saved = localStorage.getItem('cw_channel');
+      if (saved) return saved.toLowerCase().replace('#', '').trim();
+    }
 
     return 'cptponos';
   }
@@ -428,9 +432,31 @@
   document.getElementById('input-channel').value = activeChannel;
 
   if (window.Twitch && window.Twitch.ext) {
-    window.Twitch.ext.onAuthorized((auth) => {
-      if (auth && auth.channelId) {
+    window.Twitch.ext.onAuthorized(async (auth) => {
+      if (auth && auth.channelId && auth.token) {
         console.log('[Twitch Ext Config] Авторизован канал ID:', auth.channelId);
+        try {
+          const clientId = auth.clientId || '4mr6i16vvtfztb40tkhnpkgeo06i5c';
+          const r = await fetch(`https://api.twitch.tv/helix/users?id=${auth.channelId}`, {
+            headers: {
+              'Client-ID': clientId,
+              'Authorization': 'Extension ' + auth.token
+            }
+          });
+          if (r.ok) {
+            const data = await r.json();
+            if (data.data && data.data[0] && data.data[0].login) {
+              const detectedLogin = data.data[0].login.toLowerCase();
+              console.log('[Twitch Ext Config] Точно определён логин канала:', detectedLogin);
+              activeChannel = detectedLogin;
+              document.getElementById('input-channel').value = activeChannel;
+              localStorage.setItem('cw_channel', activeChannel);
+              pollStatus();
+            }
+          }
+        } catch (err) {
+          console.warn('[Twitch Ext Config] Ошибка получения имени через Helix:', err);
+        }
       }
     });
 

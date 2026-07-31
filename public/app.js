@@ -17,8 +17,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Инициализация официального Twitch Extension Helper SDK
   if (window.Twitch && window.Twitch.ext) {
-    window.Twitch.ext.onAuthorized((auth) => {
-      console.log('[Twitch Ext] Авторизован на канале:', auth.channelId);
+    window.Twitch.ext.onAuthorized(async (auth) => {
+      console.log('[Twitch Ext] Авторизован на канале ID:', auth.channelId);
+      if (auth && auth.channelId && auth.token) {
+        try {
+          const clientId = auth.clientId || '4mr6i16vvtfztb40tkhnpkgeo06i5c';
+          const r = await fetch(`https://api.twitch.tv/helix/users?id=${auth.channelId}`, {
+            headers: {
+              'Client-ID': clientId,
+              'Authorization': 'Extension ' + auth.token
+            }
+          });
+          if (r.ok) {
+            const data = await r.json();
+            if (data.data && data.data[0] && data.data[0].login) {
+              const detectedLogin = data.data[0].login.toLowerCase();
+              console.log('[Twitch Ext] Точно определён логин канала:', detectedLogin);
+              localStorage.setItem('cw_channel', detectedLogin);
+              if (socket && socket.readyState === WebSocket.OPEN) {
+                connectWebSocket();
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[Twitch Ext] Ошибка определения имени через Helix:', e);
+        }
+      }
       fetchInitialState();
     });
 
