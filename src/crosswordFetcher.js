@@ -80,6 +80,11 @@ const ONLINE_THEMES = {
     name: "🎲 absite.ru — Случайный кроссворд (из 7900+)",
     isDynamic: true,
     words: []
+  },
+  graycell: {
+    name: "🧩 graycell.ru — Случайный классический кроссворд (из 450+)",
+    isDynamic: true,
+    words: []
   }
 };
 
@@ -100,6 +105,18 @@ class CrosswordFetcher {
    * Загрузить случайный кроссворд с внешнего веб-ресурса или из онлайн-базы
    */
   static async fetchRandomOnline(requestedCategory = null) {
+    if (requestedCategory === 'graycell') {
+      try {
+        const randomId = Math.floor(Math.random() * 440) + 10;
+        const res = await this.fetchFromUrl(`https://www.graycell.ru/onlinecross/cross${randomId}.html`);
+        if (res && res.words && res.words.length >= 5) {
+          return res;
+        }
+      } catch (e) {
+        console.warn("[CrosswordFetcher] Ошибка загрузки с graycell.ru:", e.message);
+      }
+    }
+
     if (requestedCategory === 'absite') {
       try {
         const randomId = Math.floor(Math.random() * 7800) + 100;
@@ -114,6 +131,16 @@ class CrosswordFetcher {
           if (res && res.words && res.words.length >= 5) return res;
         } catch (err) {}
       }
+    }
+
+    // Если запрошен общий случайный онлайн-кроссворд (или без категории) — случайный выбор между absite и graycell
+    if (!requestedCategory || requestedCategory === 'random') {
+      const sources = ['absite', 'graycell'];
+      const chosen = sources[Math.floor(Math.random() * sources.length)];
+      try {
+        const res = await this.fetchRandomOnline(chosen);
+        if (res && res.words && res.words.length >= 5) return res;
+      } catch (e) {}
     }
 
     if (requestedCategory && ONLINE_THEMES[requestedCategory] && ONLINE_THEMES[requestedCategory].words.length > 0) {

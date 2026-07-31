@@ -276,7 +276,7 @@
     </div>
 
     <button class="btn btn-purple" id="btn-save-bot" onclick="connectChannelBot()">
-      <span id="btn-save-label">🔄 Сгенерировать новый кроссворд</span>
+      <span id="btn-save-label">🎲 Загрузить случайный кроссворд</span>
     </button>
 
     <div class="status-bar" id="bot-status-msg"></div>
@@ -461,22 +461,22 @@
 
     setLoading('btn-save-bot', 'btn-save-label', true);
     dot.className = 'dot pending';
-    label.textContent = 'Генерация…';
+    label.textContent = 'Загрузка…';
 
     try {
-      const r = await fetch(SERVER + '/api/new-game', {
+      const r = await fetch(SERVER + '/api/load-online-crossword', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel: activeChannel, wordCount: 10 })
+        body: JSON.stringify({ channel: activeChannel, source: 'theme', category: 'random' })
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Ошибка сервера');
-      showStatus('bot-status-msg', '✅ Новый кроссворд запущен на канале #' + activeChannel, 'success');
+      showStatus('bot-status-msg', '✅ Случайный кроссворд «' + (data.title || 'Кроссворд') + '» (' + data.wordCount + ' слов) запущен на канале #' + activeChannel + '!', 'success');
       localStorage.setItem('cw_channel', activeChannel);
     } catch (e) {
       showStatus('bot-status-msg', '❌ ' + e.message, 'error');
     } finally {
-      setLoading('btn-save-bot', 'btn-save-label', false, '🔄 Сгенерировать новый кроссворд');
+      setLoading('btn-save-bot', 'btn-save-label', false, '🎲 Загрузить случайный кроссворд');
       pollStatus();
     }
   }
