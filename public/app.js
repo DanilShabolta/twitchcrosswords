@@ -222,8 +222,15 @@ function getBackendHost() {
   return DEFAULT_BACKEND_HOST;
 }
 
+let pingInterval = null;
+
 // Подключение по WebSocket к серверу расширения для конкретного канала
 function connectWebSocket() {
+  if (socket) {
+    try { socket.close(); } catch (e) {}
+  }
+  if (pingInterval) clearInterval(pingInterval);
+
   const host = getBackendHost();
   const channel = getChannel();
   const isSecure = window.location.protocol === 'https:' || host.includes('railway.app') || host.includes('trycloudflare.com');
@@ -238,6 +245,13 @@ function connectWebSocket() {
     console.log('[Extension] Соединение с сервером установлено');
     const connText = document.getElementById('connStatusText');
     if (connText) connText.textContent = 'Загрузка сетки кроссворда...';
+    
+    // Периодический PING раз в 15 секунд для поддержания активности Cloudflare туннеля
+    pingInterval = setInterval(() => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'PING' }));
+      }
+    }, 15000);
   };
 
   socket.onmessage = (event) => {
@@ -252,16 +266,18 @@ function connectWebSocket() {
   };
 
   socket.onclose = () => {
-    console.warn('[Extension] Соединение закрыто. Переподключение через 3 сек...');
+    if (pingInterval) clearInterval(pingInterval);
+    console.warn('[Extension] Соединение закрыто. Переподключение через 2 сек...');
     const connText = document.getElementById('connStatusText');
     if (connText) connText.textContent = 'Переподключение к серверу...';
-    setTimeout(connectWebSocket, 3000);
+    setTimeout(() => {
+      fetchInitialState();
+      connectWebSocket();
+    }, 2000);
   };
 
   socket.onerror = (err) => {
     console.error('[Extension] Ошибка соединения WS:', err);
-    const connText = document.getElementById('connStatusText');
-    if (connText) connText.textContent = 'Ошибка соединения. Проверьте сервер.';
   };
 }
 
