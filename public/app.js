@@ -198,7 +198,7 @@ function getChannel() {
   return 'cptponos';
 }
 
-const DEFAULT_BACKEND_HOST = '6bf4e36eaf170f.lhr.life';
+const DEFAULT_BACKEND_HOST = 'attention-examples-neutral-visits.trycloudflare.com';
 
 // Определяем хост сервера расширения
 function getBackendHost() {
