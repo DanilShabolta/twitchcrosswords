@@ -198,7 +198,7 @@ function getChannel() {
   return 'cptponos';
 }
 
-const DEFAULT_BACKEND_HOST = 'scroll-elections-real-attach.trycloudflare.com';
+const DEFAULT_BACKEND_HOST = 'lightning-stand-consist-yukon.trycloudflare.com';
 
 // Определяем хост сервера расширения
 function getBackendHost() {
