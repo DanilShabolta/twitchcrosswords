@@ -222,7 +222,7 @@ function getChannel() {
   return 'cptponos';
 }
 
-const DEFAULT_BACKEND_HOST = 'conduct-crew-cache-independent.trycloudflare.com';
+const DEFAULT_BACKEND_HOST = 'achievements-daisy-race-signal.trycloudflare.com';
 
 // Определяем хост сервера расширения
 function getBackendHost() {
